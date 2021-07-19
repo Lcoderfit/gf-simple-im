@@ -1,2 +1,3 @@
-# gf-simple-im
-基于GoFrame开发的简易聊天室
+# GoFrame Project
+
+https://goframe.org
