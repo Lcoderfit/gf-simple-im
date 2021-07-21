@@ -19,10 +19,17 @@
 
 # Database.
 [database]
-    link  = "mysql:root:123456@tcp(127.0.0.1:3306)/test"
+    link  = "mysql:root:lcoder124541@tcp(127.0.0.1:3306)/gf-demos"
     debug = true
     # Database logger.
     [database.logger]
-        Path   = "/tmp/log/gf-app/sql"
+        Path   = "E:/SocialProject/IM-tags/gf-simple-im/log/gf-app/sql"
         Level  = "all"
         Stdout = true
+
+# GF-CLI工具配置
+[gfcli]
+    # 自定义DAO生成配置(默认是读取database配置)
+    [[gfcli.gen.dao]]
+        link   = "mysql:root:lcoder124541@tcp(127.0.0.1:3306)/gf-demos"
+        tables = "user"

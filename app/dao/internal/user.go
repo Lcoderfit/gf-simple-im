@@ -20,11 +20,24 @@ type UserDao struct {
 
 // UserColumns defines and stores column names for table user.
 type userColumns struct {
+	Id       string // 用户ID
+	Passport string // 用户账号
+	Password string // 用户密码
+	Nickname string // 用户昵称
+	CreateAt string // 创建时间
+	UpdateAt string // 更新时间
 }
 
 // NewUserDao creates and returns a new DAO object for table data access.
 func NewUserDao() *UserDao {
-	columns := userColumns{}
+	columns := userColumns{
+		Id:       "id",
+		Passport: "passport",
+		Password: "password",
+		Nickname: "nickname",
+		CreateAt: "create_at",
+		UpdateAt: "update_at",
+	}
 	return &UserDao{
 		C:     columns,
 		M:     g.DB("default").Model("user").Safe(),
