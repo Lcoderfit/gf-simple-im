@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"gf-simple-im/app/model"
 	"github.com/gogf/gf/container/garray"
 	"github.com/gogf/gf/container/gmap"
@@ -11,11 +12,12 @@ import (
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/gcache"
+	"github.com/gogf/gf/util/gconv"
 	"time"
 )
 
 // 聊天管理器
-const Chat = &chatApi{}
+var Chat = &chatApi{}
 
 type chatApi struct{}
 
@@ -42,7 +44,7 @@ func (a *chatApi) Index(r *ghttp.Request) {
 	r.Response.WriteTpl("chat/index.html")
 }
 
-// 设置
+// 设置聊天页面, 如果进入聊天页面成功，就将当前用户名保存到session中
 func (a *chatApi) SetName(r *ghttp.Request) {
 	var (
 		apiReq *model.ChatApiSetNameReq
@@ -86,101 +88,104 @@ func (a *chatApi) WebSocket(r *ghttp.Request) {
 	}
 }
 
-//
-//// @summary WebSocket接口
-//// @description 通过WebSocket连接该接口发送任意数据。
-//// @tags    聊天室
-//// @router  /chat/websocket [POST]
-//func (a *chatApi) WebSocket(r *ghttp.Request) {
-//	msg := &model.ChatMsg{}
-//
-//	// 初始化WebSocket请求
-//	var (
-//		ws  *ghttp.WebSocket
-//		err error
-//	)
-//	ws, err = r.WebSocket()
-//	if err != nil {
-//		g.Log().Error(err)
-//		return
-//	}
-//
-//	name := r.Session.GetString("chat_name")
-//	if name == "" {
-//		name = r.Request.RemoteAddr
-//	}
-//
-//	// 初始化时设置用户昵称为当前链接信息
-//	names.Add(name)
-//	users.Set(ws, name)
-//
-//	// 初始化后向所有客户端发送上线消息
-//	a.writeUserListToClient()
-//
-//	for {
-//		// 阻塞读取WS数据
-//		_, msgByte, err := ws.ReadMessage()
-//		if err != nil {
-//			// 如果失败，那么表示断开，这里清除用户信息
-//			// 为简化演示，这里不实现失败重连机制
-//			names.Remove(name)
-//			users.Remove(ws)
-//			// 通知所有客户端当前用户已下线
-//			a.writeUserListToClient()
-//			break
-//		}
-//		// JSON参数解析
-//		if err := gjson.DecodeTo(msgByte, msg); err != nil {
-//			a.write(ws, model.ChatMsg{
-//				Type: "error",
-//				Data: "消息格式不正确: " + err.Error(),
-//				From: "",
-//			})
-//			continue
-//		}
-//		// 数据校验
-//		if err := g.Validator().Ctx(r.Context()).CheckStruct(msg); err != nil {
-//			a.write(ws, model.ChatMsg{
-//				Type: "error",
-//				Data: gerror.Current(err).Error(),
-//				From: "",
-//			})
-//			continue
-//		}
-//		msg.From = name
-//
-//		// 日志记录
-//		g.Log().Cat("chat").Println(msg)
-//
-//		// WS操作类型
-//		switch msg.Type {
-//		// 发送消息
-//		case "send":
-//			// 发送间隔检查
-//			intervalKey := fmt.Sprintf("%p", ws)
-//			if ok, _ := cache.SetIfNotExist(intervalKey, struct{}{}, sendInterval); !ok {
-//				a.write(ws, model.ChatMsg{
-//					Type: "error",
-//					Data: "您的消息发送得过于频繁，请休息下再重试",
-//					From: "",
-//				})
-//				continue
-//			}
-//			// 有消息时，群发消息
-//			if msg.Data != nil {
-//				if err = a.writeGroup(
-//					model.ChatMsg{
-//						Type: "send",
-//						Data: ghtml.SpecialChars(gconv.String(msg.Data)),
-//						From: ghtml.SpecialChars(msg.From),
-//					}); err != nil {
-//					g.Log().Error(err)
-//				}
-//			}
-//		}
-//	}
-//}
-//
+func (a *chatApi) WebSocket(r *ghttp.Request) {
+	// 从请求获取到数据后，先进行json解析将数据传给msg
+	// 然后通过msg定义的v标签进行参数校验
+	msg := &model.ChatMsg{}
+
+	// 初始化WebSocket请求
+	var (
+		ws  *ghttp.WebSocket
+		err error
+	)
+	// 将当前请求作为一个WebSocket请求
+	ws, err = r.WebSocket()
+	if err != nil {
+		g.Log().Error(err)
+	}
+
+	name := r.Session.GetString("chat_name")
+	if name == "" {
+		// 直接发送请求过来的机器的IP地址, 假设客户端发送请求到Proxy1，Proxy1转发请求到Proxy2
+		// Proxy2转发请求到服务器，则RemoteAddr是Proxy2的Ip
+		name = r.Request.RemoteAddr
+	}
+
+	// 设置当前WebSocket对应用户昵称
+	names.Add(name)
+	users.Set(ws, name)
+
+	// 向所有客户端发送上线消息
+	a.writeUserListToClient()
+
+	for {
+		// 阻塞读取ws数据
+		_, msgByte, err := ws.ReadMessage()
+		if err != nil {
+			// 如果读取失败，那么断开链接，这里清除用户信息
+			names.Remove(name)
+			users.Remove(ws)
+			// -------省略失败重连机制，直接下线
+			a.writeUserListToClient()
+			break
+		}
+		// JSON参数解析
+		if err := gjson.DecodeTo(msgByte, msg); err != nil {
+			a.write(ws, model.ChatMsg{
+				Type: "error",
+				Data: "消息格式不正确: " + err.Error(),
+				From: "",
+			})
+			continue
+		}
+		// 数据校验
+		if err := g.Validator().Ctx(r.Context()).CheckStruct(msg); err != nil {
+			a.write(ws, model.ChatMsg{
+				Type: "error",
+				Data: "消息格式不正确：" + err.Error(),
+				From: "",
+			})
+			// 校验不通过就重试
+			continue
+		}
+		// 发送发来自于name自己
+		msg.From = name
+
+		// 设置日志的策略??
+		g.Log().Cat("chat").Println(msg)
+
+		// ws操作类型
+		switch msg.Type {
+		case "send":
+			intervalKey := fmt.Sprintf("%p", ws)
+			// 三个参数分别为key, value和过期时间
+			// 如果key存在，则返回false，否则返回true
+			// key再一秒内存在，表示再一秒内点击发送了多次，提示发送过于频繁
+			if ok, _ := cache.SetIfNotExist(intervalKey, struct{}{}, sendInterval); !ok {
+				a.write(ws, model.ChatMsg{
+					Type: "error",
+					Data: "你的消息发送过于频繁，请休息下再重试",
+					From: "",
+				})
+				continue
+			}
+			// 有消息时，群发消息
+			if msg.Data != nil {
+				if err = a.writeGroup(model.ChatMsg{
+					Type: "send",
+					// 对html特殊字符进行编码
+					// gconv.String() 将接口类型转换为字符串
+					Data: ghtml.SpecialChars(gconv.String(msg.Data)),
+					From: ghtml.SpecialChars(msg.From),
+				}); err != nil {
+					g.Log().Error(err)
+				}
+			}
+		}
+
+	}
+
+}
 
 // 向单个用户发送消息
 // 内部方法不会自动注册到路由中
@@ -191,16 +196,6 @@ func (a *chatApi) write(ws *ghttp.WebSocket, msg model.ChatMsg) error {
 	}
 	return ws.WriteMessage(ghttp.WS_MSG_TEXT, b)
 }
-
-//// 向客户端写入消息。
-//// 内部方法不会自动注册到路由中。
-//func (a *chatApi) write(ws *ghttp.WebSocket, msg model.ChatMsg) error {
-//	msgBytes, err := gjson.Encode(msg)
-//	if err != nil {
-//		return err
-//	}
-//	return ws.WriteMessage(ghttp.WS_MSG_TEXT, msgBytes)
-//}
 
 // 向所有客户端发送消息
 func (a *chatApi) writeGroup(msg model.ChatMsg) error {
