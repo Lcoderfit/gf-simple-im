@@ -32,7 +32,12 @@ var (
 	cache = gcache.New()         // 使用特定的缓存对象，不适用全局缓存对象
 )
 
-// 首页
+// @summary 聊天室首页
+// @description 聊天室首页，只显示模板内容。如果当前用户未登录，则引导跳转到名称设置页面
+// @tags 聊天室
+// @produce html
+// @success 200 {string} string "执行结果" 
+// @router /chat/index [GET]
 func (a *chatApi) Index(r *ghttp.Request) {
 	view := r.GetView()
 	//
@@ -44,7 +49,12 @@ func (a *chatApi) Index(r *ghttp.Request) {
 	r.Response.WriteTpl("chat/index.html")
 }
 
-// 设置聊天页面, 如果进入聊天页面成功，就将当前用户名保存到session中
+// @summary 设置聊天名称页面
+// @description 展示设置聊天名称页面，在该页面设置名称，成功后再跳转到聊天室页面。
+// @tags 聊天室
+// @produce html
+// @success 200 {string} string "执行成功后跳转到聊天室页面"
+// @router /chat/setname [GET]
 func (a *chatApi) SetName(r *ghttp.Request) {
 	var (
 		apiReq *model.ChatApiSetNameReq
@@ -68,26 +78,10 @@ func (a *chatApi) SetName(r *ghttp.Request) {
 	}
 }
 
-// WebSocket接口
-func (a *chatApi) WebSocket(r *ghttp.Request) {
-	msg := &model.ChatMsg{}
-	// 初始化WebSocket请求
-	var (
-		ws  *ghttp.WebSocket
-		err error
-	)
-	ws, err = r.WebSocket()
-	if err != nil {
-		g.Log().Error(err)
-		return
-	}
-
-	name := r.Session.GetString("chat_name")
-	if name == "" {
-		name = r.Request.RemoteAddr
-	}
-}
-
+// @summary WebSocket接口
+// @description 通过WebSocket连接该接口发送任意数据
+// @tags 聊天室
+// @router /chat/websocket [POST]
 func (a *chatApi) WebSocket(r *ghttp.Request) {
 	// 从请求获取到数据后，先进行json解析将数据传给msg
 	// 然后通过msg定义的v标签进行参数校验
