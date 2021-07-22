@@ -1,13 +1,23 @@
 # HTTP Server
+# 配置项参考：https://goframe.org/pages/viewpage.action?pageId=1115660
+# https://goframe.org/pages/viewpage.action?pageId=7297542
+# ServerRoot 表示静态文件存在的路径
+# ServerAgent表示服务端代理名称，默认为"GF HTTP Server"
+# RouteOverWrite 当遇到重复路由时是否强制覆盖, 如果设置为false，则启动时候如果遇到重复路由会报错
+# nameToUriType 设置路由的生成规则(0表示根据请求处理函数名大小写字母用-隔开，例如SignOut 对应路由 Sign-Out)
+# 1表示会用函数名作为路由 SignOut 对应 SignOut
+# 2表示用函数的全小写名作为路由 SignOut 对应 signout
 [server]
-	Address     = ":8199"
+	Address     = ":8064"
 	ServerRoot  = "public"
 	ServerAgent = "gf-app"
-	LogPath     = "/tmp/log/gf-app/server"
+	LogPath     = "E:/SocialProject/IM-tags/gf-simple-im/log/gf-app/server"
+	nameToUriType = 2
+	RouteOverWrite = true
 
 # Logger.
 [logger]
-    Path        = "/tmp/log/gf-app"
+    Path        = "E:/SocialProject/IM-tags/gf-simple-im/log/gf-app"
     Level       = "all"
     Stdout      = true
 

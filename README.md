@@ -187,4 +187,42 @@ replace github.com/gogf/gf => github.com/gogf/gf v1.15.5
 
 ```
 
+# 五、
+```text
+Server对于客户端提交的数据是有大小限制的，主要有两个配置参数控制：
 
+MaxHeaderBytes：请求头大小限制，请求头包括客户端提交的Cookie数据，默认设置为10KB。
+ClientMaxBodySize：客户端提交的Body大小限制，同时也影响文件上传大小，默认设置为8MB。
+
+对应nginx的配置项:
+max_header_bytes 10k;
+client_max_body_size 8m;
+
+```
+
+# 六、配置参考项
+```text
+# 配置项参考：https://goframe.org/pages/viewpage.action?pageId=1115660
+# https://goframe.org/pages/viewpage.action?pageId=7297542
+# ServerRoot 表示静态文件存在的路径
+# ServerAgent表示服务端代理名称，默认为"GF HTTP Server"
+# RouteOverWrite 当遇到重复路由时是否强制覆盖, 如果设置为false，则启动时候如果遇到重复路由会报错
+# nameToUriType 设置路由的生成规则(0表示根据请求处理函数名大小写字母用-隔开，例如SignOut 对应路由 sign-out)
+# 1表示会用函数名作为路由 SignOut 对应 SignOut
+# 2表示用函数的全小写名作为路由 SignOut 对应 signout
+
+注意：如果路由已经可以唯一性确定调用一个请求处理方法，则系统会用设置好的路由，而不会根据nameToUriType转换
+
+例如：
+		group.ALL("/chat", api.Chat)
+		group.ALL("/user", api.User)
+		group.Group("/", func(group *ghttp.RouterGroup) {
+			group.Middleware(service.Middleware.Auth)
+			group.ALL("/user/profile", api.User.Profile)
+		})
+	})
+	
+/user/xxx的请求都会传递给api.User文件，所以系统会根据nameToUriType给该文件中的请求处理函数设置对应的路由
+但是/user/profile 已经可以确定发送请求给Profile请求处理函数，所以不会受nameToUriType影响
+
+```
