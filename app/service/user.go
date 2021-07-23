@@ -27,6 +27,9 @@ func (s *userService) SignUp(r *model.UserServiceSignUpReq) error {
 	if !s.CheckNickname(r.Nickname) {
 		return errors.New(fmt.Sprintf("昵称 %s 已存在", r.Nickname))
 	}
+	if _, err := dao.User.Save(r); err != nil {
+		return err
+	}
 	return nil
 }
 

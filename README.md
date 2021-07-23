@@ -226,3 +226,11 @@ client_max_body_size 8m;
 但是/user/profile 已经可以确定发送请求给Profile请求处理函数，所以不会受nameToUriType影响
 
 ```
+
+# 七、问题
+```text
+1.前端（通过swagger可以访问到后端）
+2.密码未加密
+3.QPS压测
+4.调用WebSocket接口发送数据时，有一个for循环，为什么当一个用户发送消息时，群发的消息不会无限发送给自己
+```
